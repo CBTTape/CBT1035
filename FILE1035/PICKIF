@@ -1,0 +1,24 @@
+/* REXX - Write records to the stack for which TFExpr is true.        */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+  trace err                             /*         PICKIF EXEC HS2212 */
+  signal on syntax                      /*         PICKIF EXEC HS2212 */
+  parse source Source 1 OpSys Calltype ExecName LibDD LibDSN UsedName,
+    HCE AddrSpc UsrTkn                  /*          ZPIPE EXEC HS2201 */
+  parse arg TFExpr "|" NextStage        /*         PICKIF EXEC HS2212 */
+  parse value "| ||" with Or SCat       /*         PICKIF EXEC HS2212 */
+                                        /*         PICKIF EXEC HS2212 */
+  do queued()                           /*         PICKIF EXEC HS2212 */
+      parse pull Rcd 1 W1 W2 W3 W4 W5 W  W7 W8 W9 W10 Rest
+      interpret "Bool =" TFExpr         /* REXX does heavy lifting.   */
+      if Bool then                      /*         PICKIF EXEC HS2212 */
+          queue Rcd                     /*         PICKIF EXEC HS2212 */
+      end                               /*         PICKIF EXEC HS2212 */
+                                        /*         PICKIF EXEC HS2212 */
+  if CallType == "COMMAND" then         /* Stack manager needed?      */
+      exit zPipe("stack |" NextStage, Source)
+                                        /*         PICKIF EXEC HS2212 */
+  exit 0                                /*         PICKIF EXEC HS2212 */
+                                        /*         PICKIF EXEC HS2212 */
+syntax:                                 /*         PICKIF EXEC HS2212 */
+  say errortext(rc) "in" TFExpr "of" Source"."
+  exit rc                               /*         PICKIF EXEC HS2212 */

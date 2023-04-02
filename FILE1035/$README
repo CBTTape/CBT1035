@@ -1,0 +1,35 @@
+/* REXX - Executable and self-displaying.         $README EXEC HS2212 */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+  do iS = 4 to sourceline() - 1; say sourceline(iS); end; exit /*
+This is a beta release of zPipe.
+
+Included are the 10 stages from the document z/OS Piping in 10 Easy
+Stages, fully updated and tested, plus some other goodies.
+In general, Pipelines and UNIX/Linus compatible stages have
+the same names.  REXXified stages will have different names.
+
+The members can be compiled for performance.
+
+Installation options for executing zPipe:
+
+    Which library, .EXEC or .CEXEC:
+        - If you have the REXX compiler, use the .CEXEC library.
+        - Without the compiler, you may still save on tokenization,
+           and/or running external modules.
+        - Otherwise use the .EXEC library, especially to see how to
+            your own filters.
+
+    Residency (choose one):
+        - Copy zPipe members into an existing library.
+        - Create a new library to receive the zPipe members.
+
+    Making library executable (choose one):
+        - It is the logon proc.
+        - It is added to SYSEXEC, e.g. via CONCAT.
+        - It is added to the TSO/ISPF screen(s) with ALTLIB.
+            Some installations do not isolate ALTLIB between screens.
+        - Explicity execute zPipe; only necessary once per environment:
+            exec 'hlq.libname.exec(zPipe)'
+            This will display and execute the ALTLIB command needed.
+
+*/

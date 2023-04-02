@@ -1,0 +1,12 @@
+/* REXX - Write arg value before incoming records.             HS2110 */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+/* Syntax:  Ý ... | ¨ { STRLITERAL expr } Ý | .                       */
+  parse source Source 1 OpSys CallType ExecName ExecDD ExecDS UsedName .
+  parse arg ArgStr "|" NextStage        /*        LITERAL EXEC HS2212 */
+                                        /*                     HS2110 */
+  push ArgStr                           /*                     HS2110 */
+                                        /*                     HS2110 */
+  if CallType == "COMMAND" then         /* Stack manager needed?      */
+      exit zPipe("stack |" NextStage, Source)
+                                        /*                     HS2110 */
+  exit 0                                /*        LITERAL EXEC HS2110 */

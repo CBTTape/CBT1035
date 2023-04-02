@@ -1,0 +1,49 @@
+/* REXX - Concatenate records.                                        */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+/* Syntax: ... | join Ý N ¨ Ý Expr ¨ | ...                     HS2111 */
+/* Syntax: N defaults to 1.  DStringD defautls to ''.          HS2111 */
+  trace err                             /*           JOIN EXEC HS2111 */
+  signal on error                       /*           JOIN EXEC HS2111 */
+  parse source Source 1 OpSys CallType ExecName ExecDD ExecDS Rest
+  rc = 0                                /*           JOIN EXEC HS2111 */
+
+  parse arg N String "|" NextStage      /*           JOIN EXEC HS2111 */
+
+  select                                /*           JOIN EXEC HS2111 */
+      when datatype(N, "num") then nop  /*           JOIN EXEC HS2111 */
+      when N == "*" then                /*           JOIN EXEC HS2111 */
+          N = copies("9", digits())     /*           JOIN EXEC HS2111 */
+      otherwise                         /* Default both.       HS2111 */
+          N = 1                         /*           JOIN EXEC HS2111 */
+          String = arg(1)               /*           JOIN EXEC HS2212 */
+      end                               /*           JOIN EXEC HS2111 */
+
+  if String <> "" then                  /*           JOIN EXEC HS2212 */
+      interpret "String =" String       /* Hex, Bit, any expression.  */
+  else                                  /*           JOIN EXEC HS2212 */
+      String = ""                       /* Ensure no blanks.   HS2212 */
+
+  /* This loop would be better interative.           JOIN EXEC HS2201 */
+  do iInRcd = 1 by 1 for queued()       /*           JOIN EXEC HS2111 */
+      if var("OutRcd") then do          /*           JOIN EXEC HS2111 */
+          parse pull InRcd              /*           JOIN EXEC HS2111 */
+          OutRcd = OutRcd || String || InRcd
+          end                           /*           JOIN EXEC HS2111 */
+      else                              /*           JOIN EXEC HS2111 */
+          parse pull OutRcd             /*           JOIN EXEC HS2111 */
+
+      if iInRcd > N then do             /*           JOIN EXEC HS2111 */
+          queue OutRcd                  /*           JOIN EXEC HS2111 */
+          drop OutRcd                   /*           JOIN EXEC HS2111 */
+          iInRcd = 0                    /*           JOIN EXEC HS2111 */
+          end                           /*           JOIN EXEC HS2111 */
+      end                               /*           JOIN EXEC HS2111 */
+
+  if var("OutRcd") then                 /*           JOIN EXEC HS2212 */
+      queue OutRcd                      /*           JOIN EXEC HS2212 */
+
+  if CallType == "COMMAND" then         /* Stack manager needed?      */
+      exit zPipe("stack |" NextStage, Source)
+
+error:                                  /*           JOIN EXEC HS2111 */
+  exit rc                               /*           JOIN EXEC HS2111 */

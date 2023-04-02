@@ -1,0 +1,42 @@
+/* REXX - Samples of using zPipe.       **        SAMPLES EXEC HS2212 */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+  trace com                             /* Show what we are doing.    */
+  signal on error                       /*        SAMPLES EXEC HS2212 */
+  parse source Source 1 OpSys CallType ExecName ExecDD ExecDS Rest
+
+  if ExecDS <> "?" then                 /*        SAMPLES EXEC HS2212 */
+      "exec '"ExecDS"(zPipe)' 'query' ex"
+
+  call SampRun,                         /*        SAMPLES EXEC HS2212 */
+    "%query",,                          /*        SAMPLES EXEC HS2212 */
+    "%literal testing | terminal",,
+    "%zPipe tso status" userid(),
+      "| PickIf wordpos(executing, Rcd) > 0",
+      "| terminal",,                    /*        SAMPLES EXEC HS2212 */
+    "%tso st" userid() "| call word 3  | term",,
+    "%zPipe tso st rexxman | spex translate(W3, '  ', '()') | term",,
+    "%zPipe < zpipe.exec(IsEQ)",
+      "| call left 72",                 /*        SAMPLES EXEC HS2212 */
+      "| stack",,                       /*        SAMPLES EXEC HS2212 */
+    "%zPipe stack",
+      "| split '/*'",                   /*        SAMPLES EXEC HS2212 */
+      "| term",                         /*        SAMPLES EXEC HS2212 */
+      "| PickIf pos('*/', Rcd) = 0",    /* Remove comments.    HS2212 */
+      "| term",,                        /*        SAMPLES EXEC HS2212 */
+
+error:                                  /*        SAMPLES EXEC HS2212 */
+  exit rc                               /*        SAMPLES EXEC HS2212 */
+
+/*--------------------------------------------------------------------*/
+SampRun:                                /*        SAMPLES EXEC HS2212 */
+  trace err                             /*        SAMPLES EXEC HS2212 */
+  do iArg = 1 to arg()                  /*        SAMPLES EXEC HS2212 */
+      ThisArg = arg(iArg)               /*        SAMPLES EXEC HS2212 */
+      say right(iArg, 6) '>>> "'ThisArg'"'
+      (ThisArg)                         /*        SAMPLES EXEC HS2212 */
+      say                               /*        SAMPLES EXEC HS2212 */
+      end iArg                          /*        SAMPLES EXEC HS2212 */
+
+  return                                /*        SAMPLES EXEC HS2212 */
+
+/*--------------------------------------------------------------------*/
