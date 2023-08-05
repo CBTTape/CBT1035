@@ -1,0 +1,14 @@
+/* REXX - Standard message prefix.      **       MSGPREFX EXEC HS2110 */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+/* Fut:  Write also to log.             **       MSGPREFX EXEC HS2110 */
+MsgPrefx:                               /*       MSGPREFX EXEC HS2201 */
+  parse arg Msg, LineNo, CallerName     /*       MSGPREFX EXEC HS2110 */
+  if length(LineNo) < 3 then            /*       MSGPREFX EXEC HS2110 */
+      LineNo = right(LineNo, 3, 0)      /*       MSGPREFX EXEC HS2110 */
+/*if left(Msg, 1) <> "I" then           /* Informational?  Don't log. */
+      call LogWrite left(CallerName, 8) right(LineNo, 6) Msg          */
+  return left(time("long"),11) CallerName || LineNo || Msg
+
+/*--------------------------------------------------------------------*/
+MsgPrefix:                              /* Internal version.   HS2201 */
+  return MsgPrefx(arg(1), sigl, ExecName)

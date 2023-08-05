@@ -1,0 +1,21 @@
+/* REXX - Write Expr evaluation of records to stack.                  */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+  trace err                             /*           SPEX EXEC HS2212 */
+  signal on syntax                      /*           SPEX EXEC HS2212 */
+  parse source Source 1 OpSys Calltype ExecName LibDD LibDSN UsedName,
+    HCE AddrSpc UsrTkn                  /*          ZPIPE EXEC HS2201 */
+  parse value "| ||" with Or SCat       /*           SPEX EXEC HS2212 */
+  parse arg Expr "|" NextStage          /*           SPEX EXEC HS2212 */
+  do queued()                           /*           SPEX EXEC HS2212 */
+      parse pull Rcd 1 W1 W2 W3 W4 W5 W6 W7 W8 W9 W10 Rest
+      interpret "queue" Expr            /* REXX does heavy lifting.   */
+      end                               /*           SPEX EXEC HS2212 */
+
+  if CallType == "COMMAND" then         /* Stack manager needed?      */
+      exit zPipe("stack |" NextStage, Source)
+
+  exit 0                                /*           SPEX EXEC HS2212 */
+
+syntax:                                 /*           SPEX EXEC HS2212 */
+  say errortext(rc) "in" Expr "of" Source"."
+  exit rc                               /*           SPEX EXEC HS2212 */

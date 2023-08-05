@@ -1,0 +1,8 @@
+/* REXX - Return the worst return code. **        RCWORST EXEC HS2201 */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+RCWorst:                                /*        RCWORST EXEC HS2201 */
+  trace e                               /*        RCWORST EXEC HS2201 */
+  arg RC1, RC2                          /*        RCWORST EXEC HS2201 */
+  if RC1 >= 0 & RC2 >=0 then            /*        RCWORST EXEC HS2201 */
+      return max(RC1, RC2)              /*        RCWORST EXEC HS2201 */
+  return min(RC1, RC2)                  /*        RCWORST EXEC HS2201 */

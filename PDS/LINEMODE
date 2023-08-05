@@ -1,0 +1,39 @@
+/* REXX - Write stack records to screen in line mode.          HS2110 */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+/* Syntax: ... | { LINEMODE | CONSsole | TERMinal } Ý | ... ¨         */
+  trace err                             /*                     HS2110 */
+  parse source OpSys CallType ExecName ResDD ResDSName UsedName HCE .
+  StageNum = StageNum()                 /*       LINEMODE EXEC HS2111 */
+  parse arg . "|" NextStage             /*                     HS2110 */
+
+  if StageNum() = 1 then                /*       LINEMODE EXEC HS2112 */
+      call Input                        /*       LINEMODE EXEC HS2112 */
+  else                                  /*       LINEMODE EXEC HS2112 */
+      call Output                       /*       LINEMODE EXEC HS2112 */
+
+  if CallType == "COMMAND" then         /* Stack manager needed?      */
+      exit zPipe("stack |" NextStage, Source)
+
+  exit 0                                /*                     HS2110 */
+
+/*--------------------------------------------------------------------*/
+
+/*--------------------------------------------------------------------*/
+Input:                                  /*       LINEMODE EXEC HS2112 */
+  say "Enter line mode input; enter for EOF:"
+  do until Rcd == ""                    /*       LINEMODE EXEC HS2112 */
+      parse linein Rcd                  /*       LINEMODE EXEC HS2112 */
+      queue Rcd                         /*       LINEMODE EXEC HS2112 */
+      end                               /*       LINEMODE EXEC HS2112 */
+  return                                /*       LINEMODE EXEC HS2112 */
+
+/*--------------------------------------------------------------------*/
+Output:                                 /*       LINEMODE EXEC HS2112 */
+  do queued()                           /*        CONSOLE EXEC HS2111 */
+      parse pull Rcd                    /*       TERMINAL EXEC HS2111 */
+      say Rcd                           /*        StackIO EXEC HS2110 */
+      queue Rcd                         /*        CONSOLE EXEC HS2111 */
+      end                               /*       LINEMODE EXEC HS2111 */
+  return                                /*       LINEMODE EXEC HS2112 */
+
+/*--------------------------------------------------------------------*/

@@ -1,0 +1,85 @@
+/* REXX - Execute pipe commands.  Run under ISPF or install REXXGblV. */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+/* Not a filter.  Does not use stack.  Caller must interpret result.  */
+/* Fut: Replace StageMax with StreamState.         PIPCMD EXEC HS2201 */
+/* Fut: SELECT IN n, n > primary --> delstack, or copy n to to pS2202 */
+/* Fut: SELECT OUT n, n > primary --> delstack.    PIPCMD EXEC HS2202 */
+/* Fut: Write output to stack?          **         PIPCMD EXEC HS2212 */
+                                        /*         PIPCMD EXEC HS2212 */
+PipCmd:                                 /*         PIPCMD EXEC HS2201 */
+  trace err                             /*       STAGENUM EXEC HS2111 */
+
+  call Initial                          /*       STAGENUM EXEC HS2111 */
+
+  do iA = 1 to arg()                    /*         PIPCMD EXEC HS2201 */
+      call CmdDo arg(iA)                /*         PIPCMD EXEC HS2201 */
+      end                               /*         PIPCMD EXEC HS2201 */
+
+  return ResultStr                      /*         PIPCMD EXEC HS2201 */
+
+/*--------------------------------------------------------------------*/
+CmdDo:                                  /*         PIPCMD EXEC HS2201 */
+  if words(arg(1)) = 1 then             /*       STAGENUM EXEC HS2111 */
+      ResultStr = ResultStr arg(1) "=" Cmd.Get(arg(1))";"
+
+  else                                  /*       STAGENUM EXEC HS2111 */
+      call Cmd.Put arg(1)               /*       STAGENUM EXEC HS2111 */
+
+  return                                /* Should not get here.       */
+
+/*--------------------------------------------------------------------*/
+Initial:                                /*       STAGENUM EXEC HS2111 */
+  ISPF? = (sysvar("sysispf") == "ACTIVE")
+  ResultStr = ""                        /*         PIPCMD EXEC HS2201 */
+
+  return                                /*       STAGENUM EXEC HS2111 */
+
+/*--------------------------------------------------------------------*/
+Cmd.Put:                                /*       STAGENUM EXEC HS2111 */
+  arg Option Value                      /*         PIPCMD EXEC HS2201 */
+  call value Option, Value              /*         PIPCMD EXEC HS2201 */
+  if ISPF? then do                      /*       STAGENUM EXEC HS2111 */
+      call ISPExec "vput" Option        /*       STAGENUM EXEC HS2111 */
+      end                               /*       STAGENUM EXEC HS2111 */
+
+  else                                  /*         PIPCMD EXEC HS2201 */
+      call REXXGblV "add valvar("Option")"
+  return                                /*       STAGENUM EXEC HS2111 */
+
+/*--------------------------------------------------------------------*/
+
+/*--------------------------------------------------------------------*/
+
+/*--------------------------------------------------------------------*/
+Cmd.Get:                                /*       STAGENUM EXEC HS2111 */
+  arg Option                            /*         PIPCMD EXEC HS2201 */
+  if ISPF? then do                      /*       STAGENUM EXEC HS2111 */
+      if ISPExec("vget" Option) = 8 then /*      STAGENUM EXEC HS2111 */
+          StageNum = ""                 /*       STAGENUM EXEC HS2111 */
+      return StageNum                   /*       STAGENUM EXEC HS2111 */
+      end                               /*       STAGENUM EXEC HS2111 */
+  else                                  /*       STAGENUM EXEC HS2111 */
+      return REXXGblV("return valvar("Option")")
+
+/*--------------------------------------------------------------------*/
+Data:                                   /* Like PL/I put data.        */
+  procedure expose (VariableList)       /* If our vars are named.     */
+  OutString =""                         /*                     HS2111 */
+  parse arg VNameList                   /*           VGET EXEC HS2111 */
+  do while VNameList <> ""              /*                     HS2111 */
+      parse var VNameList ThisVName VNameList
+      OutString = OutString ThisVName '= "'value(ThisVName)'";'
+      end                               /*                     HS2111 */
+  return OutString                      /* Suitabel for interpret.    */
+
+/*--------------------------------------------------------------------*/
+ISPExec:                                /* Return rc to call point.   */
+  trace norm                            /*             RC EXEC HS2110 */
+  signal off error                      /*             RC EXEC HS2110 */
+  address ispexec (arg(1))              /*         PIPCMD EXEC HS2201 */
+  arg Verb .                            /*             RC EXEC HS2110 */
+  RC.Verb = rc                          /*             RC EXEC HS2110 */
+
+  return rc                             /*             RC EXEC HS2110 */
+
+/*--------------------------------------------------------------------*/

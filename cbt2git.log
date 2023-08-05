@@ -1,0 +1,30 @@
+2023-08-06 01:04:40.298947 - Initialized conversion of CBT1035
+2023-08-06 01:04:40.523751 - Received CBT.V505.FILE1035.PDS from FILE1035.XMI 
+2023-08-06 01:04:40.526090 - Found $$$#DATE.txt (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/$$$#DATE
+2023-08-06 01:04:40.527241 - Found $EXPLAIN.txt (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/$EXPLAIN
+2023-08-06 01:04:40.529414 - De-xmi-ed $PDFDOC to CBT1035/docs/$PDFDOC.pdf
+2023-08-06 01:04:40.530433 - Found $README.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/$README
+2023-08-06 01:04:40.531385 - Found @FIL1035.txt (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/@FIL1035
+2023-08-06 01:04:40.531412 - Found CEXEC.x-mp4a-latm containing audio/x-mp4a-latm, moved to PDS/CEXEC
+2023-08-06 01:04:40.532358 - Found EXEC.x-mp4a-latm containing audio/x-mp4a-latm, moved to PDS/EXEC
+2023-08-06 01:04:40.534283 - Found GETFILES.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/GETFILES
+2023-08-06 01:04:40.535229 - Found ISEQ.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/ISEQ
+2023-08-06 01:04:40.536146 - Found ISONEOF.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/ISONEOF
+2023-08-06 01:04:40.536980 - Found JOIN.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/JOIN
+2023-08-06 01:04:40.537914 - Found LINEMODE.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/LINEMODE
+2023-08-06 01:04:40.538875 - Found LITERAL.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/LITERAL
+2023-08-06 01:04:40.539764 - Found MSGPREFX.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/MSGPREFX
+2023-08-06 01:04:40.540622 - Found PICKIF.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/PICKIF
+2023-08-06 01:04:40.541650 - Found PIPCMD.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/PIPCMD
+2023-08-06 01:04:40.542590 - Found QUERY.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/QUERY
+2023-08-06 01:04:40.543473 - Found RC.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/RC
+2023-08-06 01:04:40.544324 - Found RCWORST.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/RCWORST
+2023-08-06 01:04:40.545203 - Found RXCALL.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/RXCALL
+2023-08-06 01:04:40.546129 - Found SAMPLES.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/SAMPLES
+2023-08-06 01:04:40.547027 - Found SPEX.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/SPEX
+2023-08-06 01:04:40.547869 - Found SPLIT.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/SPLIT
+2023-08-06 01:04:40.548722 - Found STACKIO.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/STACKIO
+2023-08-06 01:04:40.549656 - Found STAGENUM.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/STAGENUM
+2023-08-06 01:04:40.550630 - Found STRLITER.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/STRLITER
+2023-08-06 01:04:40.551616 - Found TSO.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/TSO
+2023-08-06 01:04:40.552519 - Found ZPIPE.rexx (text/plain) in CBT.V505.FILE1035.PDS, moved to PDS/ZPIPE

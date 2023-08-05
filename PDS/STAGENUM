@@ -1,0 +1,63 @@
+/* REXX - Return ZPipe stagenum.        **       STAGENUM EXEC HS2111 */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+/* Syntax: StageNum() returns stage number.      STAGENUM EXEC HS2111 */
+/* Syntax: StageNum(n) set stage number to n.                  HS2111 */
+/* Using ISPF provides isolation across logical screens.       HS2111 */
+  trace err                             /*       STAGENUM EXEC HS2111 */
+
+  parse arg StageNum                    /*       STAGENUM EXEC HS2111 */
+  call Initial                          /*       STAGENUM EXEC HS2111 */
+
+  if StageNum = "" then                 /*       STAGENUM EXEC HS2111 */
+      call StageNum.Get                 /*       STAGENUM EXEC HS2111 */
+
+  else                                  /*       STAGENUM EXEC HS2111 */
+      call StageNum.Put                 /*       STAGENUM EXEC HS2111 */
+
+  exit -20                              /* Should not get here.       */
+
+/*--------------------------------------------------------------------*/
+Initial:                                /*       STAGENUM EXEC HS2111 */
+  ISPF? = (sysvar("sysispf") == "ACTIVE")
+
+  return                                /*       STAGENUM EXEC HS2111 */
+
+/*--------------------------------------------------------------------*/
+StageNum.Put:                           /*       STAGENUM EXEC HS2111 */
+  if ISPF? then do                      /*       STAGENUM EXEC HS2111 */
+      address ispexec                   /*       STAGENUM EXEC HS2111 */
+      call RC "vput StageNum"           /*       STAGENUM EXEC HS2111 */
+      exit                              /*       STAGENUM EXEC HS2111 */
+      end                               /*       STAGENUM EXEC HS2111 */
+
+  call REXXGblV "add valvar(StageName)"
+  exit
+
+/*--------------------------------------------------------------------*/
+
+/*--------------------------------------------------------------------*/
+
+/*--------------------------------------------------------------------*/
+StageNum.Get:                           /*       STAGENUM EXEC HS2111 */
+  if ISPF? then do                      /*       STAGENUM EXEC HS2111 */
+      address ispexec                   /*       STAGENUM EXEC HS2111 */
+      if RC("vget StageNum") = 8 then   /*       STAGENUM EXEC HS2111 */
+          StageNum = ""                 /*       STAGENUM EXEC HS2111 */
+      exit StageNum                     /*       STAGENUM EXEC HS2111 */
+      end                               /*       STAGENUM EXEC HS2111 */
+  else                                  /*       STAGENUM EXEC HS2111 */
+      exit REXXGblV("return valvar(StageName)")
+
+/*--------------------------------------------------------------------*/
+
+/*--------------------------------------------------------------------*/
+RC:                                     /* Return rc to call point.   */
+  trace norm                            /*             RC EXEC HS2110 */
+  signal off error                      /*             RC EXEC HS2110 */
+  (arg(1))                              /*             RC EXEC HS2110 */
+  arg Verb .                            /*             RC EXEC HS2110 */
+  RC.Verb = rc                          /*             RC EXEC HS2110 */
+
+  return rc                             /*             RC EXEC HS2110 */
+
+/*--------------------------------------------------------------------*/
