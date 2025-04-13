@@ -1,0 +1,27 @@
+/* REXX - Write result of function call to stack.                     */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+  trace err                             /*           CALL EXEC HS2212 */
+  signal on syntax                      /*           CALL EXEC HS2212 */
+  parse source Source 1 OpSys Calltype ExecName LibDD LibDSN UsedName,
+    HCE AddrSpc UsrTkn                  /*          ZPIPE EXEC HS2201 */
+  parse value "| ||" with Or SCat       /*           CALL EXEC HS2212 */
+  parse arg Funct Args "|" NextStage    /*           CALL EXEC HS2212 */
+  rc = 0                                /*           CALL EXEC HS2212 */
+                                        /*         PICKIF EXEC HS2212 */
+  do queued()                           /*           CALL EXEC HS2212 */
+      parse pull Rcd 1 W1 W2 W3 W4 W5 W6 W7 W8 W9 W10 Rest
+      interpret "call" Funct "Rcd," Args /* REXX does heavy lifting.  */
+      if symbol("result") == "VAR" then /* Did it return a value?     */
+          queue Result                  /* Write to stack bottom.     */
+      end                               /*           CALL EXEC HS2212 */
+                                        /*           CALL EXEC HS2212 */
+  if CallType == "COMMAND" then         /* Stack manager needed?      */
+      call zPipe "stack |" NextStage, Source
+                                        /*           CALL EXEC HS2212 */
+  exit rc                               /*           CALL EXEC HS2212 */
+                                        /*           CALL EXEC HS2212 */
+syntax:                                 /*           CALL EXEC HS2212 */
+  say rc errortext(rc) errortext(rc) "in" arg(1) "of" Source"."
+  say "If this was a system abend, you might have invoked a",
+    "non-REXX load module."
+  exit rc                               /*           CALL EXEC HS2212 */

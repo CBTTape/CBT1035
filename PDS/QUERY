@@ -1,0 +1,13 @@
+/* REXX - Report software version.      **                     HS2110 */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+/* Syntax: Ý ... | ¨ QUERY Ý | ... ¨                QUERY EXEC HS2111 */
+  parse source Source 1 OpSys CallType ExecName ExecDD ExecDS Usedname .
+  parse arg ArgStg "|" NextStage        /*        LITERAL EXEC HS2212 */
+                                        /*                     HS2110 */
+  OutStr = "* ZPipe - Stack piping tool.  Ver. 01.0 beta."
+  queue OutStr                          /*          QUERY EXEC HS2212 */
+                                        /*                     HS2110 */
+  if CallType == "COMMAND" then         /* Stack manager needed?      */
+      exit zPipe("stack |" NextStage, Source)
+                                        /*                     HS2110 */
+  exit 0                                /*        LITERAL EXEC HS2110 */

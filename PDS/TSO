@@ -1,0 +1,67 @@
+/* REXX - Put command output into stack.                       HS2110 */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+/* Syntax:  Ý ... | ¨ TSO   cmd   Ý | ... ¨                    HS2201 */
+/* Syntax:    ... |   TSO Ý cmd ¨ Ý | ... ¨                    HS2201 */
+/* OUTTRAP() cannot be invoked when already active at another level.  */
+/* Fut:  Report return codes in secondary stream as Pipelines.        */
+  trace err                             /*                     HS2110 */
+  parse source Source 1 OpSys CallType ExecName ExecDD ExecDS UsedName .
+  parse arg CmdStr "|" NextStage        /*                     HS2110 */
+  MainRC = 0                            /*            TSO EXEC HS2201 */
+
+  interpret PipCmd("OutTrap", "StageNum", "StageMax")
+  if translate(strip(OutTrap)) == "ACTIVE" then do
+      say MsgPrefx("U", Sigl(), ExecName) "Recursive use of TSO",
+        "stage not supported."          /*            TSO EXEC HS2201 */
+      exit -20                          /*            TSO EXEC HS2201 */
+      end                               /*            TSO EXEC HS2201 */
+
+  if StageNum = 1 & Cmd = "" then do    /*            TSO EXEC HS2201 */
+      say MsgPrefx("E", Sigl(), ExecName) "Command operand required,"
+        "for first stage."              /*            TSO EXEC HS2201 */
+      exit -20                          /*            TSO EXEC HS2201 */
+      end                               /*            TSO EXEC HS2201 */
+
+  call PipCmd "OutTrap ACTIVE"          /* Note OUTTRAP active.       */
+  "altlib deactivate application(exec)" /* Give access to all EXECs.  */
+  if CmdStr <> "" then                  /*            TSO EXEC HS2201 */
+      push CmdStr                       /*            TSO EXEC HS2201 */
+
+  call outtrap "CmdOut."                /*                     HS2110 */
+  do queued()                           /*            TSO EXEC HS2201 */
+      parse pull Cmd                    /*            TSO EXEC HS2201 */
+      call TSODo Cmd                    /*            TSO EXEC HS2201 */
+      end                               /*            TSO EXEC HS2201 */
+  call outtrap "off"                    /*                     HS2110 */
+
+  "altlib activate application(exec) ddname(ZPipeLib)"
+  call PipCmd "OutTrap inactive"        /*            TSO EXEC HS2201 */
+
+  do iCO = 1 to CmdOut.0                /*                     HS2110 */
+      queue CmdOut.iCO                  /*                     HS2110 */
+      end iCO                           /*                     HS2110 */
+
+  if CallType == "COMMAND" then         /* Stack manager needed?      */
+      exit zPipe("stack |" NextStage, Source)
+
+  exit MainRC                           /*                     HS2110 */
+
+/*--------------------------------------------------------------------*/
+Sigl:                                   /*            TSO EXEC HS2201 */
+  return sigl                           /*            TSO EXEC HS2201 */
+
+/*--------------------------------------------------------------------*/
+TSODo:                                  /*            TSO EXEC HS2201 */
+  trace err                             /*            TSO EXEC HS2201 */
+  signal off error                      /*            TSO EXEC HS2201 */
+  (arg(1))                              /*            TSO EXEC HS2201 */
+  MainRC = RCWorst(MainRC, rc)          /*            TSO EXEC HS2201 */
+  if rc <> 0 then                       /*            TSO EXEC HS2201 */
+      say "RC" rc":" arg(1)             /*            TSO EXEC HS2201 */
+  return                                /*            TSO EXEC HS2201 */
+
+/*--------------------------------------------------------------------*/
+/* Optional external/internal routines. **            TSO EXEC HS2201 */
+/*%INCLUDE RCWorst                                                    */
+/*%INCLUDE MsgPrefx                                                   */
+/*%INCLUDE PipCmd                                                     */

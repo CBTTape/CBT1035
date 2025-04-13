@@ -1,0 +1,183 @@
+/* REXX - Read or write stack.  Stack at entry is retained.           */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+/* Syntax:   ... |   StackIO { > or >> } dsn or DDname=ddn Ý | ... ¨  */
+/* Syntax: Ý ... | ¨ StackIO < Ý dsn or DDname=ddn ¨ | ...            */
+/* ?yntax: < creates a new stack.                                     */
+/* Syntax:  DDNAME= must be spelled out completely.            HS2111 */
+/* Syntax:  See also Pipelines help <mvs or $read .            HS2111 */
+/* Should < act like push or queue?  Do lifo/fifo do that?  Newstack. */
+/* New stack causes problems?           **        STACKIO EXEC HS2112 */
+  trace err                             /*                     HS2110 */
+  signal on error                       /*                     HS2110 */
+  rc = 0                                /*        STACKIO EXEC HS2112 */
+  parse source Source 1 OpSys CallType ExecName LibDD LibDSN UsedName .
+
+  parse arg ArgStr "|" NextStage        /*                     HS2110 */
+  parse upper var ArgStr Option Target "DDNAME=" DDName "(" Member ")"
+
+  call Initial                          /*                     HS2110 */
+
+  select                                /*        StackIO EXEC HS2110 */
+      when IsOneOf(Option, "< diskr") > 0 then
+          call Read                     /*        STACKIO EXEC HS2110 */
+      when IsOneOf(Option, "> diskw") > 0 then
+          call Write                    /*        STACKIO EXEC HS2110 */
+      when Option = "DISKRU" then
+          call ReadUpdate               /*        STACKIO EXEC HS2110 */
+      when Option = ">>" then do        /*        StackIO EXEC HS2110 */
+          if \DataSet? then             /* DDname= was specified.     */
+              say MsgPrefix("W DD" DDName,
+                "must be allocated MOD to append.")
+          call Append                   /*        StackIO EXEC HS2110 */
+          end                           /*        STACKIO EXEC HS2110 */
+      end                               /* Logic error if here.       */
+
+  if DataSet? then                      /*        STACKIO EXEC HS2111 */
+      "free dd("DDName")"               /* Free our allocation.       */
+                                        /*                     HS2110 */
+  if CallType == "COMMAND" then         /* Stack manager needed?      */
+      exit zPipe("stack |" NextStage, Source)
+
+  call Done rc                          /*        STACKIO EXEC HS2111 */
+
+/*--------------------------------------------------------------------*/
+Initial:                                /*                     HS2110 */
+  trace com                             /*        STACKIO EXEC HS2110 */
+  Globals = "sigl ExecName"             /*        STACKIO EXEC HS2111 */
+  parse source OpSys CallType ExecName ExecDD ExecLib UsedName,
+    InitHCE AddrSpc UserTokn            /*           SHOW EXEC HS2110 */
+  MainRC = 0                            /*        STACKIO EXEC HS2111 */
+
+  if Target = "" & DDName = "" then do  /*        STACKIO EXEC HS2110 */
+      say MsgPrefix("E Data Set Name or Data Definition name required.")
+      rc = sigl                         /*        STACKIO EXEC HS2110 */
+      call Done sigl                    /*        STACKIO EXEC HS2111 */
+      end                               /*        STACKIO EXEC HS2110 */
+
+  OptValues = "< > >> diskr diskw diskru"
+  if IsOneOf(Option, OptValues) = 0 then do
+      say MsgPrefix("E Option must be one of:"  OptValues,
+        "  Found:" Option)              /*        StackIO EXEC HS2110 */
+      exit sigl                         /*        StackIO EXEC HS2110 */
+      end                               /*        StackIO EXEC HS2110 */
+
+  Stems = "Disp."                       /*                     HS2110 */
+  call Stem.Put "Disp.",,               /*                     HS2110 */
+    "diskr shr",       "< shr diskr",,  /* Read                HS2110 */
+    "diskw old",       "> old diskw",,  /* Write               HS2110 */
+    ">> mod",,                          /* Append              HS2110 */
+/*  "diskru old",,    disabled.         ** Read for update.    HS2110 */
+
+  ReadParm = ""                         /*                     HS2110 */
+
+  /* Separte member name from DSN.      **        STACKIO EXEC HS2111 */
+  DataSet? = (DDName = "" & Target <> "")
+  if Member = "" & Target <> "" then do /* Have dataset?              */
+      parse var Target LibName "(" Member ")" Rest
+      if Member <> "" then              /* Have member?        HS2111 */
+          LibName = LibName || Rest     /* DSN without member.        */
+      end                               /*        STACKIO EXEC HS2111 */
+
+  select                                /*        STACKIO EXEC HS2111 */
+      when words(Target) > 1 then       /* member ddname       HS2111 */
+          parse var Target Member DDName .
+      when DataSet? then do             /*                     HS2110 */
+          Result.sysdsn = sysdsn(Target)
+          if Result.sysdsn <> "OK" then /*        STACKIO EXEC HS2111 */
+              call Done "", "E" Result.sysdsn":" Target
+          if DDName = "" then           /*        STACKIO EXEC HS2111 */
+              DDName = DDUniq(ExecName) /*                     HS2110 */
+          call RC "alloc dd("DDName")",
+            word(Disp.option, 1) "dataset("Target")"
+          end                           /*        STACKIO EXEC HS2111 */
+      otherwise                         /*        STACKIO EXEC HS2111 */
+      end
+
+  return                                /*                     HS2110 */
+
+/*--------------------------------------------------------------------*/
+Stem.Put:                               /*                     HS2110 */
+  procedure expose (Stems) (Globals)    /*                     HS2110 */
+  trace com                             /* No host commands here yet. */
+  arg StemName                          /*                     HS2110 */
+  do iA = 2 to arg()                    /*                     HS2110 */
+      parse upper value arg(iA) with Tail Val
+      call value StemName"Tail", Val    /* Works with <, >, and >>.   */
+      end                               /*        STACKIO EXEC HS2111 */
+
+  return                                /*                     HS2110 */
+
+/*--------------------------------------------------------------------*/
+Read:                                   /* Load data into stack.      */
+ReadForUpd:                             /* May not work or be useful. */
+  if translate(word(Target, 1)) == "LIFO" then
+      parse var Target ReadParm Target  /*                     HS2110 */
+  if Option = "<" then                  /*        STACKIO EXEC HS2110 */
+      Option = "diskr"                  /*        STACKIO EXEC HS2110 */
+
+/* Newstack?                            **        STACKIO EXEC HS2112 */
+  "execio *" Option DDname "(finis" ReadParm")"
+
+  return                                /*                     HS2110 */
+
+/*--------------------------------------------------------------------*/
+MsgPrefix:                              /* Convinient to external.    */
+  parse arg Msg, Num                    /*        STACKIO EXEC HS2110 */
+  if Num = "" then                      /*        STACKIO EXEC HS2112 */
+      Num = sigl                        /*        STACKIO EXEC HS2112 */
+  return MsgPrefx(Msg, Num, ExecName)   /*        STACKIO EXEC HS2110 */
+
+/*--------------------------------------------------------------------*/
+Write:                                  /*        STACKIO EXEC HS2110 */
+Append:                                 /* MOD was set above.  HS2110 */
+
+  call Stem.PeekTo                      /*        STACKIO EXEC HS2112 */
+  "execio * diskw" DDname "(finis stem Data." /* Write to DD.        */
+
+  return                                /*                     HS2110 */
+
+/*--------------------------------------------------------------------*/
+Stem.PeekTo:                            /* Copy stack to stem.        */
+  arg StemName                          /*         STKCAT EXEC HS2110 */
+  if StemName = "" then                 /*        STACKIO EXEC HS2112 */
+      StemName = "Data."                /*        STACKIO EXEC HS2112 */
+  HBnd = StemName"0"                    /*         STKCAT EXEC HS2110 */
+  iLast = value(HBnd)                   /*         STKCAT EXEC HS2110 */
+  if \datatype(iLast, "whole") then     /*         STKCAT EXEC HS2110 */
+      iLast = 0                         /*         STKCAT EXEC HS2110 */
+
+  do iLast = iLast + 1 by 1 for queued()
+      parse pull Rcd                    /*          FANIN EXEC HS2111 */
+      call value StemName || iLast, Rcd
+      queue Rcd                         /* Keep stem intack.   HS2112 */
+      end iLast                         /*         STKCAT EXEC HS2110 */
+
+  call value HBnd, iLast - 1            /*         STKCAT EXEC HS2110 */
+
+/*say Data("ExecName sigl" HBnd)        **          FANIN EXEC HS2112 */
+
+  return                                /*         STKCAT EXEC HS2110 */
+
+/*--------------------------------------------------------------------*/
+
+/*--------------------------------------------------------------------*/
+Data:                                   /*          FANIN EXEC HS2112 */
+  parse arg VarList                     /*          FANIN EXEC HS2112 */
+  OutStr = ""                           /*          FANIN EXEC HS2112 */
+  do while VarList <> ""                /*          FANIN EXEC HS2112 */
+      parse var VarList ThisVar VarList /*          FANIN EXEC HS2112 */
+      OutStr = OutStr || ThisVar"="value(ThisVar)"; "
+      end                               /*          FANIN EXEC HS2112 */
+  return OutStr                         /*          FANIN EXEC HS2112 */
+
+/*--------------------------------------------------------------------*/
+Done:                                   /*        STACKIO EXEC HS2111 */
+  parse arg MainRC, Message             /*        STACKIO EXEC HS2111 */
+  if MainRC = "" then                   /*        STACKIO EXEC HS2111 */
+      MainRC = sigl                     /*        STACKIO EXEC HS2111 */
+  if Message <> "" then                 /*        STACKIO EXEC HS2111 */
+      say MsgPrefix(Message, sigl)      /*        STACKIO EXEC HS2111 */
+
+/*--------------------------------------------------------------------*/
+error:                                  /*        STACKIO EXEC HS2111 */
+  exit rc                               /*                     HS2110 */

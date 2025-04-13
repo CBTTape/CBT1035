@@ -1,0 +1,47 @@
+/* REXX - Split records by words or delimiting string.         HS2110 */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+  trace err                             /* No host commands here yet. */
+  signal on syntax                      /*          SPLIT EXEC HS2110 */
+  parse source Source 1 OpSys CallType ExecName ExecDD ExecDS Rest
+  parse arg Dlm "|" NextStage           /*                     HS2110 */
+
+  call Initial                          /*          SPLIT EXEC HS2110 */
+  call Process                          /*          SPLIT EXEC HS2110 */
+
+  if CallType == "COMMAND" then         /* Stack manager needed?      */
+      exit zPipe("stack |" NextStage, Source)
+
+  exit 0                                /*                     HS2110 */
+
+/*--------------------------------------------------------------------*/
+Initial:                                /*          SPLIT EXEC HS2110 */
+  rc = 0                                /*          Split EXEC HS2110 */
+  ArgBlank = (Dlm = "")                 /*                     HS2110 */
+
+  if Dlm <> "" then                     /*          SPLIT EXEC HS2212 */
+      interpret "Dlm =" Dlm             /* Hex, bit, or REXX expressn */
+
+  return                                /*          SPLIT EXEC HS2110 */
+
+/*--------------------------------------------------------------------*/
+Process:                                /*          SPLIT EXEC HS2110 */
+
+  do queued()                           /*                     HS2110 */
+      parse pull Rcd                    /*                     HS2110 */
+      do while Rcd <> " "               /*                     HS2110 */
+          if ArgBlank then              /* Break at words.            */
+              parse var Rcd Word Rcd
+          else                          /*          SPLIT EXEC HS2212 */
+              parse var Rcd Word (Dlm) Rcd
+          queue Word                    /*                     HS2110 */
+          end                           /*                     HS2110 */
+      end                               /*                     HS2110 */
+
+  return                                /*          SPLIT EXEC HS2110 */
+
+/*--------------------------------------------------------------------*/
+syntax:                                 /*          SPLIT EXEC HS2110 */
+  say condition("cond") condition("desc") "in SPLIT" arg(1)
+  exit rc                               /*          SPLIT EXEC HS2110 */
+
+/*--------------------------------------------------------------------*/

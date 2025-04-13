@@ -1,0 +1,14 @@
+/* REXX - Execute host command and return rc to call point.    HS2110 */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+/* If external call side-effects do not take place.    RC EXEC HS2110 */
+
+/*--------------------------------------------------------------------*/
+RC:                                     /* Return rc to call point.   */
+  trace norm                            /*             RC EXEC HS2110 */
+  signal off error                      /*             RC EXEC HS2110 */
+  (arg(1))                              /*             RC EXEC HS2110 */
+  arg Verb .                            /*             RC EXEC HS2110 */
+  RC.Verb = rc                          /*             RC EXEC HS2110 */
+
+  return rc                             /*             RC EXEC HS2110 */
+

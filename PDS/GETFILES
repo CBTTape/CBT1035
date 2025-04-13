@@ -1,0 +1,24 @@
+/* REXX - Load data from named datasets/dds into stacks.       HS2112 */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+/* Syntax:  Files are each loaded into own stack.                     */
+/* Syntax:  Input records are operands to StackIO < .          HS2112 */
+  trace err                             /*       GETFILES EXEC HS2112 */
+  signal on error                       /*       GETFILES EXEC HS2112 */
+  rc = 0                                /*       GETFILES EXEC HS2112 */
+  parse source Source 1 OpSys CallType ExecName ExecDD ExecDS Rest
+  parse arg "|" NextStage               /*       GETFILES EXEC HS2112 */
+
+  DSN.0 = queued()                      /*       GETFILES EXEC HS2112 */
+  do iD = 1 to DSN.0                    /*       GETFILES EXEC HS2112 */
+      parse pull DSN.iD                 /*       GETFILES EXEC HS2112 */
+      end iD                            /*       GETFILES EXEC HS2112 */
+
+  do iD = DSN.0 to 1 by -1              /* LIFO to match input order. */
+      "%StackIO <" DSN.                 /*                            */
+      end                               /*       GETFILES EXEC HS2112 */
+
+  if CallType == "COMMAND" then         /* Stack manager needed?      */
+      exit zPipe("stack |" NextStage, Source)
+
+error:                                  /*       GETFILES EXEC HS2112 */
+  exit rc                               /*       GETFILES EXEC HS2112 */

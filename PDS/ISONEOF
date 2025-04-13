@@ -1,0 +1,5 @@
+/* REXX - Caseless wordpos().           **        ISONEOF EXEC HS2110 */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+IsOneOf:                                /*        ISONEOF EXEC HS2110 */
+  arg Needle, Haystack                  /* Make upper case.    HS2110 */
+  return wordpos(Needle, Haystack)      /* Look for needle.    HS2110 */

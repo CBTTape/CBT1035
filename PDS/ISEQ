@@ -1,0 +1,5 @@
+/* REXX - Case independent compare.     **           ISEQ EXEC HS2112 */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+IsEq:                                   /*           ISEQ EXEC HS2201 */
+  arg Str1, Str2                        /*           ISEQ EXEC HS2112 */
+  return Str1 = Str2                    /*           ISEQ EXEC HS2112 */

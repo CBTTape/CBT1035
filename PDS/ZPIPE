@@ -1,0 +1,300 @@
+/* REXX - ZPipe - Manage stack and support REXX functions.     HS2110 */
+/*%copyright (c) Copyright REXXLab.com 2022                           */
+/* Syntax: ZPipe Ý (StreamOpts) ¨ Ý Sep ¨ stage Ý Sep stage ¨...      */
+/* Note: StreamOpts defaults:  StageSep="|"; Elapsed=0; StgTrc=0      */
+/*--------------------------------------------------------------------*/
+/* This approach (stack, pull, push, queue) is superior        HS2110 */
+/*   to emulating Unix piping, becasue:                        HS2110 */
+/*     - Using the stack is more efficient.                    HS2110 */
+/*         - The stack seems to consist of pointers to heap data.     */
+/*         - Outrap() is slow.                                 HS2110 */
+/*         - Unchanged stack records don't have to move.       HS2110 */
+/*         - Push, newstack, delstack, makebuf, delbuf, qbuf, etc.    */
+/*             provide more flexibiity.                        HS2110 */
+/*     - Calling program can setup and inspect stack.          HS2110 */
+/*     - Stages almost write themselves.                       HS2110 */
+/*--------------------------------------------------------------------*/
+/* NEWSTACK/DELSTACK by default.        **                     HS2110 */
+/* Supports stack stage.                **                     HS2110 */
+/* Altlib to zPipe lib for conflicts, e.g. CONS, TERM, etc. (Fut.)    */
+/* Multi-steam, independant             ** (Fut.)   ZPIPE EXEC HS2110 */
+/*-ChgHst-------------------------------------------------------------*/
+/* 20221230 Handle next stage here.                 ZPIPE EXEC HS2212 */
+/*--------------------------------------------------------------------*/
+/* Fut: EndChar creates new stack?  When to delete?            HS2111 */
+/* Fut: Execute input streams last to first, so sec. below pri.?      */
+/* Fut: Execute output streams first to last, so pri. above sec.?     */
+/* Stage. is a variable width table of stages by stream.       HS2201 */
+  trace err                             /*          ZPIPE EXEC HS2110 */
+  signal on novalue                     /*          ZPIPE EXEC HS2111 */
+  call time "reset"                     /*          ZPIPE EXEC HS2110 */
+  parse source Source 1 OpSys Calltype ExecName ExecDD ExecDSN UsedName,
+    HCE AddrSpc UsrTkn                  /*          ZPIPE EXEC HS2201 */
+  call Init                             /*          ZPIPE EXEC HS2111 */
+  parse arg PipeSpec 1 Misc "(" Options ")" Rest, CallerSrc
+  CallerCallType = word(CallerSrc, 2)   /*          ZPIPE EXEC HS2212 */
+  if Misc = "" & Options <> "" then do
+      PipeSpec = Rest                   /* Why?     ZPIPE EXEC HS2111 */
+      signal off novalue                /*          ZPIPE EXEC HS2112 */
+      interpret Options                 /*          ZPIPE EXEC HS2111 */
+      signal on novalue                 /*          ZPIPE EXEC HS2112 */
+      if var("Trace") then              /*          ZPIPE EXEC HS2112 */
+          trace value Trace             /*          ZPIPE EXEC HS2112 */
+      PipeSpec = Rest                   /* Or why this?        HS2201 */
+      if var("Sep") then                /*          ZPIPE EXEC HS2202 */
+          StageSep = Sep                /*          ZPIPE EXEC HS2202 */
+      end                               /*          ZPIPE EXEC HS2111 */
+
+  if PipeSpec = "" then                 /*          ZPIPE EXEC HS2201 */
+      call Done "", "W One or more stages are required."
+
+  call ArgParse                         /*          ZPIPE EXEC HS2112 */
+  call Process                          /*          ZPIPE EXEC HS2112 */
+
+  call Done MainRC                      /*          ZPIPE EXEC HS2111 */
+
+/*--------------------------------------------------------------------*/
+Var:                                    /*          ZPIPE EXEC HS2111 */
+  trace com                             /*          ZPIPE EXEC HS2112 */
+  return symbol(arg(1)) == "VAR"        /*          ZPIPE EXEC HS2111 */
+
+/*--------------------------------------------------------------------*/
+Init:                                   /*          ZPIPE EXEC HS2111 */
+  trace com                             /*          ZPIPE EXEC HS2112 */
+  MainRC = 0                            /*          ZPIPE EXEC HS2110 */
+
+  StgTrc = 0                            /*          ZPIPE EXEC HS2110 */
+  Trace = "err"                         /*          ZPIPE EXEC HS2112 */
+  if verify(left(OpSys, 1), "TC") = 0 then
+      StageSep = "|"                    /* TSO, CMS.                  */
+  else                                  /*          ZPIPE EXEC HS2201 */
+      StageSep = "!"                    /* Win, UNIX, Linux, etc.     */
+  EndSep   = "?"                        /*          ZPIPE EXEC HS2110 */
+  Elapsed  = 0                          /*          ZPIPE EXEC HS2112 */
+  StkStart = RC("qstack")               /*          ZPIPE EXEC HS2112 */
+
+/* After 19, use stack or multiple calls.           ZPIPE EXEC HS2112 */
+  call Stem.Put "Alias.",,              /* Create aliases.     HS2111 */
+    "<            StackIO <",,          /*          ZPIPE EXEC HS2111 */
+    ">            StackIO >",,          /*          ZPIPE EXEC HS2111 */
+    ">>           StackIO >>",,         /*          ZPIPE EXEC HS2111 */
+    "translate    Translat",,           /*          ZPIPE EXEC HS2111 */
+    "xlate        Translat",,           /*          ZPIPE EXEC HS2111 */
+    "timestamp    TimeStam",,           /*          ZPIPE EXEC HS2111 */
+    "term         LineMode",,           /*          ZPIPE EXEC HS2111 */
+    "terminal     LineMode",,           /*          ZPIPE EXEC HS2111 */
+    "cons         LineMode",,           /* Write to operator?         */
+    "console      LineMode",,           /*          ZPIPE EXEC HS2111 */
+    "*:           Connectr",,           /* For some compatibility.    */
+    "spec         Specs",,              /*          ZPIPE EXEC HS2201 */
+    "q            Query",,              /*          ZPIPE EXEC HS2201 */
+    "getfile      GetFiles",,           /*          ZPIPE EXEC HS2201 */
+    "notlocate    NLocate",,            /*          ZPIPE EXEC HS2201 */
+    "strliteral   StrLiter",,           /*          ZPIPE EXEC HS2202 */
+    "call         RxCall",,             /*          ZPIPE EXEC HS2202 */
+
+  if ExecDSN <> "?" then do             /*          ZPIPE EXEC HS2212 */
+      if listdsi("zPipeLib file") = 16 then
+          "alloc dd(zPipeLib) shr dataset('"ExecDSN"')"
+      "altlib act appl(exec) ddname(zPipeLib)"
+      end                               /*          ZPIPE EXEC HS2212 */
+  return                                /*          ZPIPE EXEC HS2111 */
+
+/*--------------------------------------------------------------------*/
+Stem.Put:                               /*          ZPIPE EXEC HS2111 */
+  trace com                             /*          ZPIPE EXEC HS2112 */
+  parse arg StemName                    /*          ZPIPE EXEC HS2111 */
+  do iA = 2 to arg()                    /*          ZPIPE EXEC HS2111 */
+      ThisArg = arg(iA)                 /*          ZPIPE EXEC HS2112 */
+      parse upper var ThisArg Tail .
+      call value StemName"Tail", strip(subword(ThisArg, 2))
+      end                               /*          ZPIPE EXEC HS2111 */
+
+  return                                /*          ZPIPE EXEC HS2111 */
+
+/*--------------------------------------------------------------------*/
+ArgParse:                               /*          ZPIPE EXEC HS2112 */
+  trace err                             /*          ZPIPE EXEC HS2201 */
+  MsgPref = MsgPrefx("I", sigl, ExecName)
+  /* Fut: Apply self escaping | here.   **          ZPIPE EXEC HS2212 */
+  do StrmNum = 1 by 1 while PipeSpec <> ""
+      iStr = StrmNum                    /*          ZPIPE EXEC HS2112 */
+
+      /* Provide UNIX/Linux behaviour for command invocation.  HS2212 */
+      if right(strip(PipeSpec, "trail"), 1) = StageSep then
+          if CallerCallType == "COMMAND" then
+              PipeSpec = PipeSpec "terminal"
+          else                          /*          ZPIPE EXEC HS2212 */
+              PipeSpec = PipeSpec "stack"
+
+      parse var PipeSpec Stream (EndSep) PipeSpec
+      if iStr = 1 & Stream = "" then do
+          StrmNum = 0                   /* Allow initial EndSep.      */
+          iterate StrmNum               /*          ZPIPE EXEC HS2111 */
+          end                           /*          ZPIPE EXEC HS2111 */
+
+      do StageNum = 1 by 1 while Stream <> ""
+          iStg = StageNum               /*          ZPIPE EXEC HS2112 */
+          parse var Stream Stage (StageSep) Stream
+          if iStg = 1 & Stage = "" then do
+              StageNum = 0              /* Allow initial StageSep.    */
+              iterate StageNum          /*          ZPIPE EXEC HS2111 */
+              end                       /*          ZPIPE EXEC HS2111 */
+          Stage.iStr.iStg = Stage
+          if StgTrc <> 0 then           /* Fut: Do similar in Process */
+              say MsgPref Data("Stage."iStr"."iStg)
+          end StageNum                  /*          ZPIPE EXEC HS2110 */
+
+      Stage.iStr.0 = StageNum - 1       /*          ZPIPE EXEC HS2112 */
+      end StrmNum                       /*          ZPIPE EXEC HS2110 */
+
+  Stage.0 = StrmNum - 1                 /*          ZPIPE EXEC HS2201 */
+
+  return                                /*          ZPIPE EXEC HS2112 */
+
+/*--------------------------------------------------------------------*/
+Data:                                   /* Like PL/I put data.        */
+  OutString =""                         /*                     HS2111 */
+  parse arg VNameList                   /*           VGET EXEC HS2111 */
+  do while VNameList <> ""              /*                     HS2111 */
+      parse var VNameList ThisVName VNameList
+      call symbol ThisVName
+      if result == "VAR" then
+          OutString = OutString || ThisVName '= "'value(ThisVName)'"; '
+      else                              /*          ZPIPE EXEC HS2201 */
+          OutString = OutString"say" ThisName "is" result".; "
+      end                               /*                     HS2111 */
+  return OutString                      /* Suitabel for interpret.    */
+
+/*--------------------------------------------------------------------*/
+Process:                                /*          ZPIPE EXEC HS2112 */
+  trace err                             /*          ZPIPE EXEC HS2201 */
+  do StrmNum = 1 to Stage.0 & MainRC >= 0
+      rc = 0                            /* In case stack or *: .      */
+      iStr = StrmNum                    /*          ZPIPE EXEC HS2112 */
+      call PipCmd "StageMax" Stage.iStr.0
+      do StageNum = 1 to Stage.iStr.0
+          iStg = StageNum               /*          ZPIPE EXEC HS2112 */
+
+          StageString = Mapping(Stage.iStr.iStg)
+
+          NotStack = (IsOneOf(StageName, "stack *:") = 0)
+          if StageNum = 1 then
+              if NotStack then
+                  "newstack"            /*          ZPIPE EXEC HS2110 */
+          if StageNum < Stage.iStr.0 & StageNum > 1 | NotStack then
+              call StageDo StageString
+
+          RC.StageNum = rc              /* Do we need .iStr. ?        */
+          if rc = -3 then do            /*          ZPIPE EXEC HS2111 */
+             say right(StageNum, 6) "|-|" StageString
+             say copies(" ", 6) "+++ RC("rc")"
+             leave StrmNum              /*          ZPIPE EXEC HS2111 */
+             end                        /*          ZPIPE EXEC HS2111 */
+
+          if StgTrc then                /*          ZPIPE EXEC HS2110 */
+              say "zPipe I: Stage" StageNum "ended with" queued(),
+                "elements in stack" RC("qstack")"."
+
+          if RC.StageNum <> 0 then do   /*          ZPIPE EXEC HS2110 */
+              say Source                /*          ZPIPE EXEC HS2110 */
+              say MsgPrefx("E", Sigl(), ExecName),
+                "Processing ended during stage" StageNum",",
+                Stage.iStr.iStg,        /*          ZPIPE EXEC HS2202 */
+                "with code" rc"."       /*          ZPIPE EXEC HS2110 */
+              leave StageNum            /*          ZPIPE EXEC HS2110 */
+              end                       /*          ZPIPE EXEC HS2110 */
+
+          end StageNum                  /*          ZPIPE EXEC HS2110 */
+
+      /* Normal end of stream and stage not stack.             HS2201 */
+      if StageNum > Stage.iStr.0 & NotStack then
+          "delstack"                    /*          ZPIPE EXEC HS2111 */
+
+      end StrmNum                       /*          ZPIPE EXEC HS2110 */
+
+  return                                /*          ZPIPE EXEC HS2112 */
+
+/*--------------------------------------------------------------------*/
+Mapping:                                /* Fut: REXX/RXFUNCT stages?  */
+  trace com                             /*          ZPIPE EXEC HS2112 */
+  arg StageName .                       /*          ZPIPE EXEC HS2112 */
+  parse arg . Options                   /*          ZPIPE EXEC HS2111 */
+  if left(StageName, 1) == "%" then     /*          ZPIPE EXEC HS2111 */
+      StageName = substr(StageName, 2)  /*          ZPIPE EXEC HS2111 */
+  if length(StageName) > 8 then         /*          ZPIPE EXEC HS2212 */
+      StageName = left(StageName, 8)    /*          ZPIPE EXEC HS2212 */
+  if var("Alias.StageName") then        /*          ZPIPE EXEC HS2111 */
+      StageName = Alias.StageName
+
+  /* Note:  Forcing % prevents access to load module TSO commands!!!! */
+  /* Most stages are REXX.              **          ZPIPE EXEC HS2112 */
+  return StageName Options              /*          ZPIPE EXEC HS2111 */
+
+/*--------------------------------------------------------------------*/
+StageDo:                                /* Fut: Use REXX stage?       */
+  trace err                             /*          ZPIPE EXEC HS2112 */
+  signal off novalue                    /* Allow unquoted tokens.     */
+  parse arg StgPgm StgArg               /*          ZPIPE EXEC HS2212 */
+  call PipCmd "StageNum" StageNum       /* Set StageNum        HS2201 */
+  if StgPgm <> "" then                  /*                     HS2212 */
+      interpret "call" StgPgm "StgArg"  /* CALL invokes load modules. */
+  else                                  /*          ZPIPE EXEC HS2212 */
+      say MsgPrefx("E", sigl, ExecName) "Missing name in stage",
+        StageNum"."                     /*          ZPIPE EXEC HS2212 */
+  MainRC = RCWorst(MainRC, rc)          /*          ZPIPE EXEC HS2201 */
+  return                                /*          ZPIPE EXEC HS2201 */
+
+/*--------------------------------------------------------------------*/
+
+/*--------------------------------------------------------------------*/
+/* Fut: Report non-zero ExitRC?         **          ZPIPE EXEC HS2201 */
+Done:                                   /*          ZPIPE EXEC HS2111 */
+  trace err                             /*          ZPIPE EXEC HS2112 */
+  signal off error                      /*          ZPIPE EXEC HS2201 */
+  signal off novalue                    /*          ZPIPE EXEC HS2201 */
+  parse arg ExitRC, Msg                 /*          ZPIPE EXEC HS2111 */
+  if ExitRC = "" then                   /*          ZPIPE EXEC HS2111 */
+      ExitRC = sigl                     /*          ZPIPE EXEC HS2111 */
+  if Msg <> "" then                     /*          ZPIPE EXEC HS2201 */
+      say MsgPrefx(Msg, sigl, ExecName) /*          ZPIPE EXEC HS2201 */
+
+  if ExitRC <> 0 then                   /* Error?              HS2201 */
+    do rc("qstack") - StkStart          /*          ZPIPE EXEC HS2201 */
+      "delstack"                        /* Del all new stacks.        */
+      end                               /*          ZPIPE EXEC HS2201 */
+  if Elapsed = 1 then                   /*          ZPIPE EXEC HS2112 */
+      say MsgPrefx("I Elapsed Time" time("elapsed") "seconds.",,
+        sigl, ExecName)                 /*          ZPIPE EXEC HS2111 */
+
+  exit ExitRC                           /*          ZPIPE EXEC HS2110 */
+
+/*--------------------------------------------------------------------*/
+syntax:                                 /*          ZPIPE EXEC HS2111 */
+  trace com                             /*          ZPIPE EXEC HS2112 */
+  say rc errortext(rc)                  /*          ZPIPE EXEC HS2111 */
+  say condition("cond") condition("desc") "in line" sigl "of" Source
+  call Done rc                          /*          ZPIPE EXEC HS2111 */
+
+/*--------------------------------------------------------------------*/
+novalue:                                /*          ZPIPE EXEC HS2111 */
+  trace com                             /*          ZPIPE EXEC HS2112 */
+  rc = 889                              /*          ZPIPE EXEC HS2111 */
+  if sourceline() > 0 then              /*          ZPIPE EXEC HS2201 */
+      say right(sigl, 6) " " sourceline(sigl)
+  say condition("cond") condition("desc") "in line" sigl "of" Source
+  signal value traceback                /*          ZPIPE EXEC HS2201 */
+/*call Done rc                          **          ZPIPE EXEC HS2111 */
+
+/*--------------------------------------------------------------------*/
+Sigl:                                   /*          ZPIPE EXEC HS2111 */
+  trace com                             /*          ZPIPE EXEC HS2112 */
+  return sigl                           /*          ZPIPE EXEC HS2111 */
+
+/*--------------------------------------------------------------------*/
+/*%INCLUDE MsgPrefx                                                   */
+/*%INCLUDE IsEq                                                       */
+/*%INCLUDE RCWorst                                                    */
+/*%INCLUDE RC                                                         */
+/*%INCLUDE PipCmd                                                     */
+/*%INCLUDE IsOneOf                                                    */

@@ -1,0 +1,80 @@
+zPipe - A z/OS Piping Facility that combines features of
+CMS/TSO Pipelines, UNIX/Linux, and REXX.  It is a free package,
+versus BatchPipes, which is chargeable and not in the z/OS base.
+
+Piping originated in UNIX, where the limited budgets of academic
+and research organizations dictated making the best use of limited
+hardware.
+
+Piping is both a machine performance feature and a productivity tool.
+
+Piping performance comes from passing the output of one program to
+the input of another using an in-memory buffer.  This avoids slow
+disk I/O and saves on hardware resources.
+
+Piping productivity comes from two aspects:
+    - It is achieved via an operator (a | b) which connects the
+       output of a to the input of b.  Compare this single character
+       to the JCL for creating a temporary dataset in one step
+       and passing it to another.
+    - Piping allows data to be passed between programs independent
+       of the file structure.  a | b, in one context, could become
+       a | c | d, in another.  a, b, etc. are called filters or
+       stages.
+
+zPipe delivers these features:
+    - It is written entirely in REXX.
+    - New stages can be written using simple REXX without
+       introducing additional host commands.
+    - It does not require additional software.
+    - Operand syntax is that of REXX via the interpret instruction.
+       The user learning curve, the development costs and the
+       execution time penalty of decoding any other operand syntax
+       are avoided.
+    - Processing is done at the record level, as opposed to the
+       CPU-intensive byte level of UNIX/Linux.
+    - Like CMS/TSO Pipelines and BatchPipes, only referenced bytes
+       go thru the CPU.
+    - Also like Pipelines/BatchPipes, binary data can be
+       processed with the same filters as text data.  There are
+       no embedded control characters or DCB parameters between stages.
+    - Dispatching takes place once per filter.
+    - It free and available on the CBT Tape.
+    - Data is passed via the REXX stack, which is managed by the
+       zPipe module.
+    - The zPipe module also protects against unintentional execution
+       of data by TSO.
+    - A single selection filter, PICKIF, delivers the functionality
+       of numerous Pipelines selection filters and avoids the
+       complexity of UNIX programs such as grep and awk.  Again,
+       operand syntax is that of REXX.
+    - SPEX provide reformatting, like Pipelines SPECS, again using
+       REXX syntax.
+    - The CALL stage allows any REXX callable function to be
+       invoked as filter.
+    - When executed as a COMMAND line, the end results are written
+       to the terminal or primary output, making zPipe familiar to
+       both UNIX/Linux users and intuitive to novices.
+    - User programs can invoke filters to manipulate REXX stack data
+       without or without invoking the zPipe main module.  In this
+       case, FUNCTION or SUBROUTINE invocation is used, as reported
+       by PARSE SOURCE ... .
+    - zPipe uses the familiar <, >, and >> for reading, writing and
+       and appending data sets.  As in Pipelines, > and >> are
+       pass-thru filters:  Data written is still available to
+       following stages.
+
+Some Pipelines/BatchPipe and zPipe equivalents:
+
+Removing sequence numbers from FB 80 data.
+       Pipelines:  pipe  < payroll.cobol | chop 72 | ..."
+       zPipe:      zpipe < payroll.cobol | call left 72 | ...
+
+Reformating first and last names into last, first.
+       Pipelines:  pipe  < usrnames.data | specs w2 1 /,/ n w1 nw | ...
+       zPipe       zpipe < usrnames.data | spex w2',' w1 | ...
+
+Selecting jobs that are executing.
+       Pipelines:  pipe  tso status | pick if w3 == /EXECUTING/ | ...
+       zPipe:      zpipe tso status | pickif w3 = 'EXECUTING' | ...
+
